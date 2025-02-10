@@ -15,6 +15,17 @@ This application serves as a valuable tool for:
 *   **Educational Institutions**:  To understand and address the factors influencing student adaptability, optimizing online learning programs.
 *   **Policymakers**: To gain insights into the broader trends affecting online learning adaptability and inform educational strategies.
 
+</br>
+</br>
+
+## Demo Video
+
+<a href="https://youtu.be/qQ00DFrWuAk?si=CwlXHxip391zZzf5">
+  <img src="https://img.youtube.com/vi/qQ00DFrWuAk/hqdefault.jpg" width="600" alt="Student Adaptability App Demo Video Thumbnail">
+</a>
+
+*Click on the image above to watch a short video demonstrating the features and functionality of the Student Adaptability Prediction Web Application.
+
 ## Features
 
 *   **Intuitive Web Interface:**  Leveraging Streamlit, the application provides a simple and accessible web-based interface for all users.
