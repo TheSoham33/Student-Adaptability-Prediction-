@@ -5,7 +5,9 @@ import pickle
 import os
 
 # Load the trained model
-model_path = "D:\\Projects\\Student Adaptibility\\model.pkl"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the current script directory
+model_path = os.path.join(BASE_DIR, "model.pkl")
+
 if os.path.exists(model_path):
     try:
         with open(model_path, "rb") as file:
