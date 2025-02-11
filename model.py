@@ -9,12 +9,19 @@ import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Define paths
-BASE_DIR = r"D:\Projects\Student Adaptibility"
-train_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_train.csv")
-test_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_test.csv")
-model_path = os.path.join(BASE_DIR, "model.pkl")
-output_path = os.path.join(BASE_DIR, "predictions.csv")
+# # Define paths
+# BASE_DIR = r"D:\Projects\Student Adaptibility"
+# train_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_train.csv")
+# test_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_test.csv")
+# model_path = os.path.join(BASE_DIR, "model.pkl")
+# output_path = os.path.join(BASE_DIR, "predictions.csv")
+
+
+# Define paths - **Using Relative Paths **
+train_file_path = "students_adaptability_level_online_education_train.csv"
+test_file_path = "students_adaptability_level_online_education_test.csv"
+model_path = "model.pkl"
+output_path = "predictions.csv"
 
 # Load the training dataset
 if not os.path.exists(train_file_path):
