@@ -1,107 +1,192 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
+import pickle
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, classification_report
 import joblib
-import os
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Define paths
-BASE_DIR = r"D:\Projects\Student Adaptibility"
-train_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_train.csv")
-test_file_path = os.path.join(BASE_DIR, "students_adaptability_level_online_education_test.csv")
-model_path = os.path.join(BASE_DIR, "model.pkl")
-output_path = os.path.join(BASE_DIR, "predictions.csv")
+# Load dataset (LOCAL PATH)
+fp = "students_adaptability_level_online_education_train.csv"
+df = pd.read_csv(fp)
 
-# Load the training dataset
-if not os.path.exists(train_file_path):
-    raise FileNotFoundError(f"❌ Training file not found: {train_file_path}")
+# Dataset info
+df.info(), df.head()
 
-df = pd.read_csv(train_file_path)
+# Check missing values
+missing_values = df.isnull().sum()
+print(missing_values)
 
-# Identify categorical columns
+# Unique values in each column
+unique_values = df.nunique()
+print(unique_values)
+
+# Set plot style
+sns.set(style="whitegrid")
+my_colors = ["skyblue", "lightcoral", "lightgreen", "lightyellow", "lightpink", "lightcyan"]
+
+# Plot categorical distributions
+fig, axes = plt.subplots(nrows=5, ncols=3, figsize=(15, 15))
+axes = axes.flatten()
+
+for i, col in enumerate(df.columns):
+    if df[col].nunique() <= 6:
+        sns.countplot(y=df[col], ax=axes[i], order=df[col].value_counts().index, palette=my_colors[:df[col].nunique()])
+        axes[i].set_title(f"Distribution of {col}")
+
+plt.tight_layout()
+plt.show()
+
+# Mapping age and class duration
+age_mapping = {"06-Oct": "6-10", "01-May": "1-5", "Nov-15": "11-15"}
+df["Age"] = df["Age"].replace(age_mapping)
+
+class_duration_mapping = {"03-Jun": "3-6", "01-Mar": "1-3", "0": "0"}
+df["Class Duration"] = df["Class Duration"].replace(class_duration_mapping)
+
+# Select categorical columns
 categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
+columns_to_remove = ['Gender', 'Institution Type', 'IT Student', 'Location', 'Load-shedding', 'Internet Type', 'Self Lms']
+categorical_columns = [col for col in categorical_columns if col not in columns_to_remove]
 
-# One-Hot Encoding for categorical variables
+# One-hot encoding
 encoder = OneHotEncoder(drop='first', sparse_output=False)
+categorical_data = encoder.fit_transform(df[columns_to_remove])
+categorical_df = pd.DataFrame(categorical_data, columns=encoder.get_feature_names_out(columns_to_remove))
+
+encoder = OneHotEncoder(sparse_output=False)
 categorical_data = encoder.fit_transform(df[categorical_columns])
-categorical_df = pd.DataFrame(categorical_data, columns=encoder.get_feature_names_out(categorical_columns))
+categorical_df_ = pd.DataFrame(categorical_data, columns=encoder.get_feature_names_out(categorical_columns))
 
-# Merge encoded data with numerical features
-df = df.drop(columns=categorical_columns).reset_index(drop=True)
-df = pd.concat([df, categorical_df], axis=1)
+# Merge encoded data
+merged_df = pd.concat([categorical_df, categorical_df_], axis=1)
 
-# Define target and features
-target = ["Adaptivity Level_Low", "Adaptivity Level_Moderate"]
-X = df.drop(columns=target)
-y = df[target].astype(int)  # Convert to numerical format
+import pandas as pd
+import numpy as np
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+
+# Load the dataset
+file_path = "categorical_data.csv"  # Update the path if needed
+df = pd.read_csv(file_path)
+
+# Combine one-hot encoded labels into a single target column
+df["Adaptivity Level"] = df[["Adaptivity Level_High", "Adaptivity Level_Low", "Adaptivity Level_Moderate"]].idxmax(axis=1)
+
+# Drop the original one-hot encoded columns
+df.drop(["Adaptivity Level_High", "Adaptivity Level_Low", "Adaptivity Level_Moderate"], axis=1, inplace=True)
+
+# Separate features and target variable
+X = df.drop(columns=["Adaptivity Level"])
+y = df["Adaptivity Level"]
+
+# Print class distribution before balancing
+print("Class distribution before balancing:", Counter(y))
+
+# Apply SMOTE for oversampling the minority class
+smote = SMOTE(sampling_strategy='auto', random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X, y)
+
+# Convert back to DataFrame
+df_balanced = pd.concat([pd.DataFrame(X_resampled, columns=X.columns), pd.DataFrame(y_resampled, columns=["Adaptivity Level"])], axis=1)
+
+# Convert back to one-hot encoding with 1s and 0s
+df_balanced = pd.get_dummies(df_balanced, columns=["Adaptivity Level"], dtype=int)
+
+df_balanced.rename(columns={
+    "Adaptivity Level_Adaptivity Level_High": "Adaptivity Level_High",
+    "Adaptivity Level_Adaptivity Level_Low": "Adaptivity Level_Low",
+    "Adaptivity Level_Adaptivity Level_Moderate": "Adaptivity Level_Moderate"
+}, inplace=True)
+
+df_balanced = df_balanced.applymap(lambda x: 1 if x > 0 else 0)
+
+# Print class distribution after balancing
+print("Class distribution after balancing:", Counter(y_resampled))
+
+# Print class distribution after balancing
+print("Class distribution after balancing:", Counter(y_resampled))
+
+# Save the balanced dataset
+df_balanced.to_csv("balanced_data.csv", index=False)
+print("Balanced dataset saved successfully.")
+
+
+# Define target
+target = ["Adaptivity Level_Low", "Adaptivity Level_Moderate", "Adaptivity Level_High"]
+X = df_balanced.drop(columns=target)
+y = df_balanced[target].astype(int)
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Check if the model already exists
-if os.path.exists(model_path):
-    print("✅ Model found. Loading existing model...")
-    xgb_model = joblib.load(model_path)
-else:
-    print("⚠️ Model not found. Training a new model...")
+# Train XGBoost model
+try:
+    xgb_model = XGBClassifier(eval_metric='mlogloss', random_state=42, tree_method='hist')
+    xgb_model.fit(X_train, y_train)
+except Exception as e:
+    print("Error!!")
 
-    # Train the XGBoost model
-    try:
-        xgb_model = XGBClassifier(eval_metric='mlogloss', random_state=42, tree_method='hist')
-        xgb_model.fit(X_train, y_train)
-        print("✅ Model trained successfully!")
-    except Exception as e:
-        raise RuntimeError(f"❌ Error during model training: {e}")
-
-    # Save the trained model
-    joblib.dump(xgb_model, model_path)
-    print(f"📁 Model saved at: {model_path}")
-
-# Make predictions
+# Predict on test set
 y_pred = xgb_model.predict(X_test)
 
 # Evaluate model
 try:
     accuracy = accuracy_score(y_test, y_pred)
     report = classification_report(y_test, y_pred)
-    print(f"📊 Accuracy: {accuracy:.2f}")
-    print("📜 Classification Report:\n", report)
+    print(f"Accuracy: {accuracy:.2f}")
+    print("Classification Report:\n", report)
 except Exception as e:
-    print("❌ Error during evaluation:", e)
+    print("Error!!", e)
 
-# Load the test dataset
-if not os.path.exists(test_file_path):
-    raise FileNotFoundError(f"❌ Test file not found: {test_file_path}")
+# Save the model (LOCAL PATH)
+joblib.dump(xgb_model, 'model.pkl')
+xgb_model = joblib.load('model.pkl')
 
-dt = pd.read_csv(test_file_path)
+# Load test dataset (LOCAL PATH)
+test_file_path = "students_adaptability_level_online_education_test.csv"
+test = pd.read_csv(test_file_path)
 
-# Process categorical features in the test dataset
-categorical_columns = dt.select_dtypes(include=['object']).columns.tolist()
-categorical_data = encoder.transform(dt[categorical_columns])
-categorical_dt = pd.DataFrame(categorical_data, columns=encoder.get_feature_names_out(categorical_columns))
+# Apply mappings
+test["Age"] = test["Age"].replace(age_mapping)
+test["Class Duration"] = test["Class Duration"].replace(class_duration_mapping)
 
-dt = dt.drop(columns=categorical_columns).reset_index(drop=True)
-dt = pd.concat([dt, categorical_dt], axis=1)
+# Select categorical columns
+test_categorical_columns = test.select_dtypes(include=['object']).columns.tolist()
+test_columns_to_remove = ['Gender', 'Institution Type', 'IT Student', 'Location', 'Load-shedding', 'Internet Type', 'Self Lms']
+test_categorical_columns = [col for col in test_categorical_columns if col not in test_columns_to_remove]
 
-# Ensure feature order matches training data
-# Ensure feature order matches training data
-expected_features = getattr(xgb_model, "feature_names_in_", None)
+# One-hot encoding for test data
+encoder = OneHotEncoder(drop='first', sparse_output=False)
+test_categorical_data = encoder.fit_transform(test[test_columns_to_remove])
+test_categorical_df = pd.DataFrame(test_categorical_data, columns=encoder.get_feature_names_out(test_columns_to_remove))
 
-# Ensure feature order matches training data
-expected_features = getattr(xgb_model, "feature_names_in_", None)
-if expected_features is not None and len(expected_features) > 0:
-    dt = dt.reindex(columns=expected_features, fill_value=0)
+encoder = OneHotEncoder(sparse_output=False)
+test_categorical_data = encoder.fit_transform(test[test_categorical_columns])
+test_categorical_df_ = pd.DataFrame(test_categorical_data, columns=encoder.get_feature_names_out(test_categorical_columns))
 
+# Merge encoded test data
+merged_df = pd.concat([test_categorical_df, test_categorical_df_], axis=1)
 
-# Make predictions on test data
-predictions = xgb_model.predict(dt).round().astype(int)
+# Save preprocessed test data (LOCAL PATH)
+merged_df.to_csv("test_categorical_data.csv", index=False)
+print("CSV file 'test_categorical_data.csv' has been created successfully.")
 
-# Save predictions
-pred_df = pd.DataFrame(predictions, columns=["Adaptivity Level_Low", "Adaptivity Level_Moderate"])
-pred_df.to_csv(output_path, index=False)
+# Predict on test set
+A = merged_df.drop(columns=target)
+predictions = xgb_model.predict(A)
+predictions = predictions.round().astype(int)
 
-print(f"✅ Predictions saved to: {output_path}")
+# Convert predictions to DataFrame
+pred_df = pd.DataFrame(predictions, columns=["Adaptivity Level_Low", "Adaptivity Level_Moderate", "Adaptivity Level_High"])
+
+# Save predictions (LOCAL PATH)
+pred_df.to_csv("predictions.csv", index=False)
+print("Predictions saved to 'predictions.csv'.")
+
