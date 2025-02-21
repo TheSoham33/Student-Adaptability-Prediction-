@@ -4,17 +4,28 @@ import pickle
 import os
 import streamlit as st
 
-
 # Load the trained model
 with open("model.pkl", "rb") as model_file:
     xgb_model = pickle.load(model_file)
 
+st.title("📊 Adaptability Level Prediction")
+
 def get_user_input():
-    st.sidebar.title("User Input")
-    
+    st.sidebar.title("Enter Your Details")
+
+
     gender = st.sidebar.selectbox("Select Gender", ["Boy", "Girl"])
-    age = st.sidebar.slider("Enter Age", 5, 25, 18)
-    education_level = st.sidebar.selectbox("Education Level", ["School", "College", "University"])
+    age = st.sidebar.slider("Enter Age", 5, 30, 18)
+
+    if 5 <= age < 15:
+        education_options = ["School"]
+    elif 15 <= age < 20:
+        education_options = ["School", "College"]
+    else:
+        education_options = ["School", "College", "University"]
+
+    education_level = st.sidebar.selectbox("Education Level", education_options)
+    
     institution_type = st.sidebar.selectbox("Institution Type", ["Government", "Non Government"])
     it_student = st.sidebar.radio("Are you an IT student?", ["Yes", "No"])
     location = st.sidebar.radio("Do you live in a city?", ["Yes", "No"])
