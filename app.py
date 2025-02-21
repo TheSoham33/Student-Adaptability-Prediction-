@@ -3,22 +3,7 @@ import pandas as pd
 import pickle
 import os
 import streamlit as st
-from streamlit_lottie import st_lottie
 
-
-from streamlit_lottie import st_lottie
-
-def load_lottie_url(url):
-    import requests
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-# Load a Lottie animation for High Adaptability Level
-lottie_high = load_lottie_url("https://lottie.host/4c96ed6e-342f-4d23-9c15-75e57c18781d/Gv6SbnUw2P.json")  # Example JSON animation
-lottie_moderate = load_lottie_url("https://lottie.host/2d4f6a74-ffb8-4e93-9cf6-3a50e5cc5fdd/kWADlJFOgE.json")  # Moderate adaptability (Motivated)
-lottie_low = load_lottie_url("https://lottie.host/bcd3c79d-fc90-40f0-8ae8-29a9e5923b59/J7HkjgV9hb.json")  # Low adaptability (Trying to improve)
 
 # Load the trained model
 with open("model.pkl", "rb") as model_file:
