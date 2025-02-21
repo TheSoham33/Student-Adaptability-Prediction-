@@ -96,8 +96,7 @@ def encode_features(data):
     }
     return input_data
 
-# Streamlit UI
-st.title("Adaptability Level Prediction")
+
 data = get_user_input()
 
 if st.sidebar.button("Predict Adaptability Level"):
